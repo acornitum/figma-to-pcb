@@ -1,46 +1,57 @@
-// This file holds the main code for plugins. Code in this file has access to
-// the *figma document* via the figma global object.
-// You can access browser APIs in the <script> tag inside "ui.html" which has a
-// full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
-
-figma.showUI(__html__)
-figma.ui.resize(500, 300)
+figma.showUI(__html__);
+figma.ui.resize(500, 300);
 
 type VectorInfo = {
-  name: string,
-  x1: number,
-  y1: number, 
-  x2: number,
-  y2: number
-}
+  name: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
 
-const COPPER = { 
-  "r": 1, 
-  "g": 0, 
-  "b": 0
-}
+const COPPER = {
+  r: 1,
+  g: 0,
+  b: 0,
+};
 
-class GerberFile { 
-  constructor () {}
-  generateFile(fileName: string, contents: String[]) {
-    const date = new Date()
-    contents.unshift(
-      `%TF.CreationDate,${JSON.stringify(date).slice(1,-1)}*%`
-    )
-    contents.unshift(
-      `%TF.GenerationSoftware,Figma,${fileName},0.0.1*%`)
+class GerberFile {
+  constructor() {}
 
-    figma.ui.postMessage(contents.join("\n"))
-    console.log(`${fileName}.gerber contents recorded!`)
-    }
+  generateFile(fileName: string, contents: string) {
+    const date = new Date();
+    contents = `%TF.GenerationSoftware,KiCad,Pcbnew,9.0.0*%
+%TF.CreationDate,${date.toISOString()}*%
+%TF.ProjectId,athena_workshop,61746865-6e61-45f7-976f-726b73686f70,rev?*%
+%TF.SameCoordinates,Original*%
+%TF.FileFunction,Copper,L1,Top*%
+%TF.FilePolarity,Positive*%
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW 9.0.0) date ${date.toISOString()}*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+%TA.AperFunction,Conductor*%
+%ADD10C,0.200000*%
+%TD*%
+G04 APERTURE END LIST*
+D10*
+${contents}
+%TD*%
+M02*`;
+
+    figma.ui.postMessage(contents);
+    console.log(`${fileName}.gerber contents recorded!`);
+  }
 }
 
 const vectorLocations: VectorInfo[] = [];
-const gerberStuff: String[] = []
-const copper: VectorInfo[] = []
+const gerberStuff: string[] = [];
 
 // Define a scaling factor for Gerber coordinates (e.g., 1 unit = 0.01 mm)
-const SCALING_FACTOR = 1; // Scale Figma units to Gerber units (adjust as needed)
+const SCALING_FACTOR = 100; // Scale Figma units to Gerber units (adjust as needed)
 
 // Function to format coordinates for Gerber
 function formatGerberCoordinate(value: number): string {
@@ -50,19 +61,36 @@ function formatGerberCoordinate(value: number): string {
 // Recursive function to find VECTOR nodes
 function findVectors(node: SceneNode) {
   if (node.type === "VECTOR") {
-    if (node.strokes.filter((n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color)).length){
+    if (
+      node.strokes.filter(
+        (n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color)
+      ).length
+    ) {
       const vectorNetwork = node.vectorNetwork;
       if (vectorNetwork && vectorNetwork.vertices.length >= 2) {
         // Extract the first and last points of the vector
         const startPoint = vectorNetwork.vertices[0];
-        const endPoint = vectorNetwork.vertices[vectorNetwork.vertices.length - 1];
+        const endPoint =
+          vectorNetwork.vertices[vectorNetwork.vertices.length - 1];
 
         // Transform local coordinates to absolute coordinates
         const transform = node.absoluteTransform;
-        const x1 = transform[0][0] * startPoint.x + transform[0][1] * startPoint.y + transform[0][2];
-        const y1 = transform[1][0] * startPoint.x + transform[1][1] * startPoint.y + transform[1][2];
-        const x2 = transform[0][0] * endPoint.x + transform[0][1] * endPoint.y + transform[0][2];
-        const y2 = transform[1][0] * endPoint.x + transform[1][1] * endPoint.y + transform[1][2];
+        const x1 =
+          transform[0][0] * startPoint.x +
+          transform[0][1] * startPoint.y +
+          transform[0][2];
+        const y1 =
+          transform[1][0] * startPoint.x +
+          transform[1][1] * startPoint.y +
+          transform[1][2];
+        const x2 =
+          transform[0][0] * endPoint.x +
+          transform[0][1] * endPoint.y +
+          transform[0][2];
+        const y2 =
+          transform[1][0] * endPoint.x +
+          transform[1][1] * endPoint.y +
+          transform[1][2];
 
         // Convert to Gerber coordinates
         const gerberX1 = formatGerberCoordinate(x1);
@@ -79,10 +107,10 @@ function findVectors(node: SceneNode) {
           y2: parseFloat(gerberY2),
         });
 
-        // Generate Gerber commands
-        gerberStuff.push(`
-G01 X${gerberX1} Y${gerberY1} D02*  // Move to start point
-G01 X${gerberX2} Y${gerberY2} D01*  // Draw to end point`);        
+        // Generate Gerber commands for lines
+        gerberStuff.push(`%TO.N,*%
+X${gerberX1}Y${gerberY1}D02*
+X${gerberX2}Y${gerberY2}D01*`);
       }
     }
   }
@@ -94,16 +122,13 @@ G01 X${gerberX2} Y${gerberY2} D01*  // Draw to end point`);
   }
 }
 
+// Process all nodes in the current page
 for (const node of figma.currentPage.children) {
   findVectors(node);
 }
 
 console.log("Vector line locations:", vectorLocations);
 
+// Generate and save the Gerber file
 const f = new GerberFile();
-f.generateFile(figma.root.name, gerberStuff)
-
-
-
-
-
+f.generateFile(figma.root.name, gerberStuff.join("\n"));
