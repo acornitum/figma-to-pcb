@@ -4,7 +4,7 @@ figma.ui.resize(500, 300);
 type VectorInfo = {
   name: string;
   x1: number;
-  y1: number;
+  y1: number; 
   x2: number;
   y2: number;
 };
@@ -80,43 +80,32 @@ function findVectors(node: SceneNode) {
       ).length
     ) {
       const vectorNetwork = node.vectorNetwork;
+      console.log("vectorNetwork", vectorNetwork)
       if (vectorNetwork && vectorNetwork.vertices.length >= 2) {
-        // Extract the first and last points of the vector
-        const startPoint = vectorNetwork.vertices[0];
-        const endPoint =
-          vectorNetwork.vertices[vectorNetwork.vertices.length - 1];
-
-        // Transform local coordinates to absolute coordinates
-        const transform = node.absoluteTransform;
-        console.log(transform,"transform")
-        const x1 =
+        for (let i = 0; i < vectorNetwork.vertices.length; i++){
+          const startPoint = vectorNetwork.vertices[i];
+          const endPoint = ( i == vectorNetwork.vertices.length - 1 ? vectorNetwork.vertices[0] : vectorNetwork.vertices[i+1]); // asummes its connected
+          const transform = node.absoluteTransform;
+          const x1 =
           transform[0][0] * startPoint.x +
           transform[0][1] * startPoint.y +
           transform[0][2];
-        const x2 =
-          transform[0][0] * endPoint.x +
-          transform[0][1] * endPoint.x +
-          transform[0][2];
-        const y1 =
-          transform[1][0] * startPoint.x +
-          transform[1][1] * startPoint.y +
-          transform[1][2];
-        const y2 =
-          transform[1][0] * endPoint.x +
+          const x2 =
+            transform[0][0] * endPoint.x +
+            transform[0][1] * endPoint.x +
+            transform[0][2];
+          const y1 =
+            -(transform[1][0] * startPoint.x +
+            transform[1][1] * startPoint.y +
+            transform[1][2]);
+          const y2 =
+            -(transform[1][0] * endPoint.x +
           transform[1][1] * endPoint.y +
-          transform[1][2];
-
-        // Flip the Y-coordinates to match the Gerber coordinate system
-        const flippedY1 = -y1;
-        const flippedY2 = -y2;
-
-        // Convert to Gerber coordinates
+          transform[1][2]);
         const gerberX1 = formatGerberCoordinate(x1);
-        const gerberY1 = formatGerberCoordinate(flippedY1);
+        const gerberY1 = formatGerberCoordinate(y1);
         const gerberX2 = formatGerberCoordinate(x2);
-        const gerberY2 = formatGerberCoordinate(flippedY2);
-
-        // Add to vector locations
+        const gerberY2 = formatGerberCoordinate(y2);
         vectorLocations.push({
           name: node.name,
           x1: parseFloat(gerberX1),
@@ -124,11 +113,10 @@ function findVectors(node: SceneNode) {
           x2: parseFloat(gerberX2),
           y2: parseFloat(gerberY2),
         });
-
-        // Generate Gerber commands for lines
-        gerberStuff.push(`%TO.N,*%
+      gerberStuff.push(`%TO.N,*%
 X${gerberX1}Y${gerberY1}D02*
 X${gerberX2}Y${gerberY2}D01*`);
+        }
       }
     }
   }
