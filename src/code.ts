@@ -51,7 +51,7 @@ const vectorLocations: VectorInfo[] = [];
 const gerberStuff: string[] = [];
 
 // Define a scaling factor for Gerber coordinates (e.g., 1 unit = 0.01 mm)
-const SCALING_FACTOR = 100; // Scale Figma units to Gerber units (adjust as needed)
+const SCALING_FACTOR = 10000; // Scale Figma units to Gerber units (adjust as needed)
 
 // Function to format coordinates for Gerber
 function formatGerberCoordinate(value: number): string {
