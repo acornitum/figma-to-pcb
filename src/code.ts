@@ -48,7 +48,7 @@ G04 Created by KiCad (PCBNEW 9.0.0) date ${generateJankDate(date)}*
 G01*
 G04 APERTURE LIST*
 %TA.AperFunction,Conductor*%
-%ADD10C,0.200000*%
+%ADD10C,0.050000*%
 %TD*%
 G04 APERTURE END LIST*
 D10*
