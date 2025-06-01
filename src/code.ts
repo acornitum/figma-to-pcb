@@ -1,3 +1,4 @@
+import { parseVectors } from "./helpers";
 figma.showUI(__html__);
 figma.ui.resize(500, 300);
 
@@ -10,7 +11,8 @@ type VectorInfo = {
 };
 
 const COPPER = { r: 1, g: 0, b: 0 }; // Color for vector lines
-const PAD_COLOR = { r: 0, g: 1, b: 0 }; // Color for pads (orange)
+const PAD_COLOR = { r: 0.9176, g: 0.4902, b: 0.4902 }; // Color for pads (#ea7d7d)
+const EDGE = { r: 1, g: 1, b: 1 }; // Color for edge layer
 const SCALING_FACTOR = 1000000; // Scale Figma units to Gerber units
 
 // Function to format coordinates for Gerber
@@ -21,24 +23,33 @@ function formatGerberCoordinate(value: number): string {
 // Function to generate a formatted date string
 function generateJankDate(date: Date): string {
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hour = String(date.getUTCHours()).padStart(2, '0');
-  const minute = String(date.getUTCMinutes()).padStart(2, '0');
-  const second = String(date.getUTCSeconds()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  const second = String(date.getUTCSeconds()).padStart(2, "0");
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 class GerberFile {
-  constructor() {}
+  constructor(
+    public fileName: string,
+    public fileFunction: string,
+    public contents: string = "",
+    public layer?: string
+  ) {}
 
-  generateFile(fileName: string, contents: string) {
+  updateContents(newContents: string) {
+    this.contents += newContents;
+  }
+
+  generateFile() {
     const date = new Date();
-    contents = `%TF.GenerationSoftware,KiCad,Pcbnew,9.0.0*%
+    this.contents = `%TF.GenerationSoftware,figma-to-pcb,${this.fileName},9.0.0*%
 %TF.CreationDate,${date.toISOString()}*%
-%TF.ProjectId,athena_workshop,61746865-6e61-45f7-976f-726b73686f70,rev?*%
+%TF.ProjectId,${this.fileName.replace(" ", "_")},61746865-6e61-45f7-976f-726b73686f70,rev?*%
 %TF.SameCoordinates,Original*%
-%TF.FileFunction,Copper,L1,Top*%
+%TF.FileFunction,${this.fileFunction},L1,Top*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
@@ -58,17 +69,16 @@ G04 APERTURE LIST*
 %TD*%
 G04 APERTURE END LIST*
 D10*
-${contents}
+${this.contents}
 %TD*%
 M02*`;
-
-    figma.ui.postMessage(contents);
-    console.log(`${fileName}.gerber contents recorded!`);
   }
 }
 
 const vectorLocations: VectorInfo[] = [];
 const gerberStuff: string[] = [];
+const copperGerber = new GerberFile(figma.root.name, "Copper");
+const edgeGerber = new GerberFile(figma.root.name, "Edge_Cut");
 
 // Recursive function to find VECTOR and ELLIPSE nodes
 function findNodes(node: SceneNode) {
@@ -96,57 +106,23 @@ function findNodes(node: SceneNode) {
       gerberStuff.push(`%TO.P,REF**,1*%`);
       gerberStuff.push(`%TO.N,N/C*%`);
       gerberStuff.push(`X${gerberX}Y${gerberY}D03*`); // D03* for circular pads
-      console.log(`X${gerberX}Y${gerberY}D03*`)
+      console.log(`X${gerberX}Y${gerberY}D03*`);
     }
   } else if (node.type === "VECTOR") {
     // Handle vector nodes (lines)
     if (
       node.strokes.filter(
-        (n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color)
+        (n: any) => JSON.stringify(COPPER) === JSON.stringify(n.color) // copper layer
       ).length
     ) {
-      const vectorNetwork = node.vectorNetwork;
-      if (vectorNetwork && vectorNetwork.vertices.length >= 2) {
-        // Extract the first and last points of the vector
-        const startPoint = vectorNetwork.vertices[0];
-        const endPoint =
-          vectorNetwork.vertices[vectorNetwork.vertices.length - 1];
-
-        // Transform local coordinates to absolute coordinates
-        const transform = node.absoluteTransform;
-        const x1 =
-          transform[0][0] * startPoint.x +
-          transform[0][1] * startPoint.y +
-          transform[0][2];
-        const y1 =
-          transform[1][0] * startPoint.x +
-          transform[1][1] * startPoint.y +
-          transform[1][2];
-        const x2 =
-          transform[0][0] * endPoint.x +
-          transform[0][1] * endPoint.y +
-          transform[0][2];
-        const y2 =
-          transform[1][0] * endPoint.x +
-          transform[1][1] * endPoint.y +
-          transform[1][2];
-
-        // Flip the Y-coordinates to match the Gerber coordinate system
-        const flippedY1 = -y1;
-        const flippedY2 = -y2;
-
-        // Convert to Gerber coordinates
-        const gerberX1 = formatGerberCoordinate(x1);
-        const gerberY1 = formatGerberCoordinate(flippedY1);
-        const gerberX2 = formatGerberCoordinate(x2);
-        const gerberY2 = formatGerberCoordinate(flippedY2);
-
-        // Generate Gerber commands for lines
-        gerberStuff.push(`D11*`);
-        gerberStuff.push(`%TO.N,*%`);
-        gerberStuff.push(`X${gerberX1}Y${gerberY1}D02*`);
-        gerberStuff.push(`X${gerberX2}Y${gerberY2}D01*`);
-      }
+      parseVectors(node, copperGerber);
+    }
+    if (
+      node.strokes.filter(
+        (n: any) => JSON.stringify(EDGE) === JSON.stringify(n.color) // edge layer
+      ).length
+    ) {
+      parseVectors(node, edgeGerber);
     }
   }
 
@@ -165,6 +141,7 @@ for (const node of figma.currentPage.children) {
 
 console.log("Vector line locations:", vectorLocations);
 
-// Generate and save the Gerber file
-const f = new GerberFile();
-f.generateFile(figma.root.name, gerberStuff.join("\n"));
+copperGerber.generateFile();
+edgeGerber.generateFile();
+
+figma.ui.postMessage({ copper: copperGerber.contents, edge: edgeGerber.contents });

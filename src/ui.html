@@ -1,10 +1,30 @@
 <script>
 onmessage = (event) => {
-  document.getElementById("gerber").textContent = event.data.pluginMessage
+  const { copper, edge } = event.data.pluginMessage
+  const gerberFiles = ["-F_Cu.gbr", "Edge_Cuts.gbr"]
+  for (let item = 0; item < gerberFiles.length; item ++){
+  document.getElementById("container").innerHTML += `
+  <div style = "display: flex; flex-direction: row; gap: 2rem; justify-content: space-between; align-items: center;">
+    <span style = "font-family: monospace">${gerberFiles[item]}</span>
+    <button style = "padding: 0.2rem;" onClick="copyGerberText('${gerberFiles[item]}')">copy</button>
+
+  </div>
+    <div style = "
+        padding: 1rem;
+        border-radius: 0.2em;
+        background-color: #0000002a; 
+        color: black;
+        height: 50%;
+    ">
+    <textarea id = "${gerberFiles[item]}" style = "font-family: monospace; resize: none; width: 100%; height: 100%"></textarea>
+`  }
+  document.getElementById("-F_Cu.gbr").textContent = copper
+  document.getElementById("Edge_Cuts.gbr").textContent = edge
+
 }
 
-function copyGerberText(){
-    var el = document.getElementById("gerber")
+function copyGerberText(id){
+    var el = document.getElementById(id)
     el.focus();
     el.select();
     document.execCommand('copy');
@@ -25,15 +45,7 @@ function copyGerberText(){
     align-items: center;
     ">
     <span>figma 2 pcb waow! v0.0.1</span>
-    <button style = "padding: 0.2rem;" onClick="copyGerberText()">copy</button>
     </div>
-    <div style = "
-        padding: 1rem;
-        border-radius: 0.2em;
-        background-color: #0000002a; 
-        color: black;
-        height: 50%;
-    ">
-        <textarea id = "gerber" style = "font-family: monospace; resize: none; width: 100%; height: 100%"></textarea>
+        <div id = "container" style = "display: flex; flex-direction: column; gap: 1rem;">
     </div>
 </div>
