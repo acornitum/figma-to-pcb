@@ -28,7 +28,7 @@ class GerberFile {
       `%TF.CreationDate,${JSON.stringify(date).slice(1,-1)}*%`
     )
     contents.unshift(
-      `%TF.GenerationSoftware,Figma,${fileName},1.0.0*%`)
+      `%TF.GenerationSoftware,Figma,${fileName},0.0.1*%`)
 
     figma.ui.postMessage(contents.join("\n"))
     console.log(`${fileName}.gerber contents recorded!`)
