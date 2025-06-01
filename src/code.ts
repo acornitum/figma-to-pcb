@@ -5,6 +5,8 @@
 
 // This plugin creates rectangles on the screen.
 
+figma.showUI(__html__)
+
 type VectorInfo = {
   name: string,
   x1: number,
@@ -23,6 +25,7 @@ class GerberFile {
   constructor () {}
   generateFile(fileName: string, contents: string) {
     console.log(contents)
+    figma.ui.postMessage(contents)
     console.log(`${fileName}.gerber contents recorded!`)
     }
 }
@@ -93,14 +96,11 @@ for (const node of figma.currentPage.children) {
 
 // Output result to console and close the plugin
 console.log("Vector line locations:", vectorLocations);
-figma.closePlugin(`Found ${vectorLocations.length} vector lines. Check console.`);
-
 
 const f = new GerberFile();
 f.generateFile("name", JSON.stringify(vectorLocations))
 
-// Make sure to close the plugin when you're done. Otherwise the plugin will
-// keep running, which shows the cancel button at the bottom of the screen.
-figma.closePlugin();
+
+
 
 

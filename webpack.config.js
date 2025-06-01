@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => ({
 mode: argv.mode === 'production' ? 'production' : 'development',
@@ -27,4 +28,11 @@ devtool: argv.mode === 'production' ? false : 'inline-source-map',
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'),
   },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        { from: 'src/ui.html', to: 'ui.html' }
+      ],
+    }),
+    ]
 });

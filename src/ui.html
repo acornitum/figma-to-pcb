@@ -1,0 +1,8 @@
+<script>
+onmessage = (event) => {
+  document.getElementById("gerber").innerText = event.data.pluginMessage
+}
+</script>
+<div style = "background-color: var(--figma-color-bg); color: var(--figma-color-text);">
+    <span id = "gerber" style = "font-family: monospace;"></span>
+</div>
