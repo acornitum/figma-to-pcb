@@ -3,8 +3,6 @@
 // You can access browser APIs in the <script> tag inside "ui.html" which has a
 // full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
 
-// This plugin creates rectangles on the screen.
-
 figma.showUI(__html__)
 
 type VectorInfo = {
@@ -15,7 +13,7 @@ type VectorInfo = {
   y2: number
 }
 
-const RED = {
+const COPPER = { 
   "r": 1, 
   "g": 0, 
   "b": 0
@@ -30,7 +28,6 @@ class GerberFile {
     }
 }
 
-// Store vector line locations here
 const vectorLocations: VectorInfo[] = [];
 const copper: VectorInfo[] = []
 
@@ -45,7 +42,7 @@ function formatGerberCoordinate(value: number): string {
 // Recursive function to find VECTOR nodes
 function findVectors(node: SceneNode) {
   if (node.type === "VECTOR") {
-    if (node.strokes.filter((n: any) => JSON.stringify(RED) == JSON.stringify(n.color)).length) {
+    if (node.strokes.filter((n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color)).length){
       const vectorNetwork = node.vectorNetwork;
       if (vectorNetwork && vectorNetwork.vertices.length >= 2) {
         // Extract the first and last points of the vector
@@ -89,12 +86,10 @@ G01 X${gerberX2} Y${gerberY2} D01*  // Draw to end point`;
   }
 }
 
-// Traverse only the current (loaded) page
 for (const node of figma.currentPage.children) {
   findVectors(node);
 }
 
-// Output result to console and close the plugin
 console.log("Vector line locations:", vectorLocations);
 
 const f = new GerberFile();
