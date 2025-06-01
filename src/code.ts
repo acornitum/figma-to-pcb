@@ -90,6 +90,10 @@ function findVectors(node: SceneNode) {
         // Transform local coordinates to absolute coordinates
         const transform = node.absoluteTransform;
         const x1 =
+          transform[0][0] * endPoint.x +
+          transform[0][1] * endPoint.y +
+          transform[0][2];
+        const x2 =
           transform[0][0] * startPoint.x +
           transform[0][1] * startPoint.y +
           transform[0][2];
@@ -97,10 +101,6 @@ function findVectors(node: SceneNode) {
           transform[1][0] * startPoint.x +
           transform[1][1] * startPoint.y +
           transform[1][2];
-        const x2 =
-          transform[0][0] * endPoint.x +
-          transform[0][1] * endPoint.y +
-          transform[0][2];
         const y2 =
           transform[1][0] * endPoint.x +
           transform[1][1] * endPoint.y +
