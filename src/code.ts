@@ -4,6 +4,7 @@
 // full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
 
 figma.showUI(__html__)
+figma.ui.resize(500, 300)
 
 type VectorInfo = {
   name: string,
@@ -21,14 +22,21 @@ const COPPER = {
 
 class GerberFile { 
   constructor () {}
-  generateFile(fileName: string, contents: string) {
-    console.log(contents)
-    figma.ui.postMessage(contents)
+  generateFile(fileName: string, contents: String[]) {
+    const date = new Date()
+    contents.unshift(
+      `%TF.CreationDate,${JSON.stringify(date).slice(1,-1)}*%`
+    )
+    contents.unshift(
+      `%TF.GenerationSoftware,Figma,${fileName},1.0.0*%`)
+
+    figma.ui.postMessage(contents.join("\n"))
     console.log(`${fileName}.gerber contents recorded!`)
     }
 }
 
 const vectorLocations: VectorInfo[] = [];
+const gerberStuff: String[] = []
 const copper: VectorInfo[] = []
 
 // Define a scaling factor for Gerber coordinates (e.g., 1 unit = 0.01 mm)
@@ -72,9 +80,9 @@ function findVectors(node: SceneNode) {
         });
 
         // Generate Gerber commands
-        const gerberCommand = `G01 X${gerberX1} Y${gerberY1} D02*  // Move to start point
-G01 X${gerberX2} Y${gerberY2} D01*  // Draw to end point`;
-        console.log(gerberCommand);
+        gerberStuff.push(`
+G01 X${gerberX1} Y${gerberY1} D02*  // Move to start point
+G01 X${gerberX2} Y${gerberY2} D01*  // Draw to end point`);        
       }
     }
   }
@@ -93,7 +101,7 @@ for (const node of figma.currentPage.children) {
 console.log("Vector line locations:", vectorLocations);
 
 const f = new GerberFile();
-f.generateFile("name", JSON.stringify(vectorLocations))
+f.generateFile(figma.root.name, gerberStuff)
 
 
 
