@@ -1,3 +1,4 @@
+import { parseVectors } from "./helpers";
 figma.showUI(__html__);
 figma.ui.resize(500, 300);
 
@@ -15,10 +16,15 @@ const COPPER = {
   b: 0,
 };
 
+const EDGE = {
+  r: 1,
+  g: 1,
+  b: 1
+}
 
 function generateJankDate(date: Date){
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Month is 0-based
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0'); 
   const day = String(date.getUTCDate()).padStart(2, '0');
 
   const hour = String(date.getUTCHours()).padStart(2, '0');
@@ -30,14 +36,23 @@ function generateJankDate(date: Date){
 }
 
 class GerberFile {
-  constructor() {}
-  generateFile(fileName: string, contents: string) {
+  constructor(public fileName: string, public fileFunction: string, public contents?: string, public layer?: string) {
+    this.contents = contents
+    this.fileName = fileName
+    this.fileFunction = fileFunction
+    this.layer = layer
+  }
+  updateContents(newContents: string){
+    this.contents += newContents
+  }
+
+  generateFile() {
     const date = new Date();
-    contents = `%TF.GenerationSoftware,figma-to-pcb,${fileName},9.0.0*%
+    this.contents = `%TF.GenerationSoftware,figma-to-pcb,${this.fileName},9.0.0*%
 %TF.CreationDate,${date.toISOString()}*%
-%TF.ProjectId,${fileName.replace(" ", "_")},61746865-6e61-45f7-976f-726b73686f70,rev?*%
+%TF.ProjectId,${this.fileName.replace(" ", "_")},61746865-6e61-45f7-976f-726b73686f70,rev?*%
 %TF.SameCoordinates,Original*%
-%TF.FileFunction,Copper,L1,Top*%
+%TF.FileFunction,${this.fileFunction},L1,Top*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
@@ -51,73 +66,31 @@ G04 APERTURE LIST*
 %TD*%
 G04 APERTURE END LIST*
 D10*
-${contents}
+${this.contents}
 %TD*%
 M02*`;
-
-    figma.ui.postMessage(contents);
-    console.log(`${fileName}.gerber contents recorded!`);
   }
 }
 
 const vectorLocations: VectorInfo[] = [];
-const gerberStuff: string[] = [];
+const copperGerber = new GerberFile(figma.root.name, "Copper");
+const edgeGerber = new GerberFile(figma.root.name, "Edge_Cut");
 
-// Define a scaling factor for Gerber coordinates (e.g., 1 unit = 0.01 mm)
-const SCALING_FACTOR = 1000000; // Scale Figma units to Gerber units (adjust as needed)
-
-// Function to format coordinates for Gerber
-function formatGerberCoordinate(value: number): string {
-  return (value * SCALING_FACTOR).toFixed(0); // No decimal places
-}
-
-// Recursive function to find VECTOR nodes
 function findVectors(node: SceneNode) {
   if (node.type === "VECTOR") {
     if (
       node.strokes.filter(
-        (n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color)
+        (n: any) => JSON.stringify(COPPER) == JSON.stringify(n.color) // copper layer wow
       ).length
     ) {
-      const vectorNetwork = node.vectorNetwork;
-      console.log("vectorNetwork", vectorNetwork)
-      if (vectorNetwork && vectorNetwork.vertices.length >= 2) {
-        for (let i = 0; i < vectorNetwork.vertices.length; i++){
-          const startPoint = vectorNetwork.vertices[i];
-          const endPoint = ( i == vectorNetwork.vertices.length - 1 ? vectorNetwork.vertices[0] : vectorNetwork.vertices[i+1]); // asummes its connected
-          const transform = node.absoluteTransform;
-          const x1 =
-          transform[0][0] * startPoint.x +
-          transform[0][1] * startPoint.y +
-          transform[0][2];
-          const x2 =
-            transform[0][0] * endPoint.x +
-            transform[0][1] * endPoint.x +
-            transform[0][2];
-          const y1 =
-            -(transform[1][0] * startPoint.x +
-            transform[1][1] * startPoint.y +
-            transform[1][2]);
-          const y2 =
-            -(transform[1][0] * endPoint.x +
-          transform[1][1] * endPoint.y +
-          transform[1][2]);
-        const gerberX1 = formatGerberCoordinate(x1);
-        const gerberY1 = formatGerberCoordinate(y1);
-        const gerberX2 = formatGerberCoordinate(x2);
-        const gerberY2 = formatGerberCoordinate(y2);
-        vectorLocations.push({
-          name: node.name,
-          x1: parseFloat(gerberX1),
-          y1: parseFloat(gerberY1),
-          x2: parseFloat(gerberX2),
-          y2: parseFloat(gerberY2),
-        });
-      gerberStuff.push(`%TO.N,*%
-X${gerberX1}Y${gerberY1}D02*
-X${gerberX2}Y${gerberY2}D01*`);
-        }
-      }
+      parseVectors(node, copperGerber)
+    }
+    if (
+      node.strokes.filter(
+        (n: any) => JSON.stringify(EDGE) == JSON.stringify(n.color) // edge layer wow
+      ).length
+    ) {
+      parseVectors(node, edgeGerber)
     }
   }
 
@@ -128,13 +101,13 @@ X${gerberX2}Y${gerberY2}D01*`);
   }
 }
 
-// Process all nodes in the current page
 for (const node of figma.currentPage.children) {
   findVectors(node);
 }
 
 console.log("Vector line locations:", vectorLocations);
 
-// Generate and save the Gerber file
-const f = new GerberFile();
-f.generateFile(figma.root.name, gerberStuff.join("\n"));
+copperGerber.generateFile();
+edgeGerber.generateFile();
+
+figma.ui.postMessage({copper: copperGerber.contents, edge: edgeGerber.contents});
