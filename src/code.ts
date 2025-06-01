@@ -106,11 +106,15 @@ function findVectors(node: SceneNode) {
           transform[1][1] * endPoint.y +
           transform[1][2];
 
+        // Flip the Y-coordinates to match the Gerber coordinate system
+        const flippedY1 = -y1;
+        const flippedY2 = -y2;
+
         // Convert to Gerber coordinates
         const gerberX1 = formatGerberCoordinate(x1);
-        const gerberY1 = formatGerberCoordinate(y1);
+        const gerberY1 = formatGerberCoordinate(flippedY1);
         const gerberX2 = formatGerberCoordinate(x2);
-        const gerberY2 = formatGerberCoordinate(y2);
+        const gerberY2 = formatGerberCoordinate(flippedY2);
 
         // Add to vector locations
         vectorLocations.push({
