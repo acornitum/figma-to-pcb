@@ -15,6 +15,20 @@ const COPPER = {
   b: 0,
 };
 
+
+function generateJankDate(date: Date){
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Month is 0-based
+  const day = String(date.getUTCDate()).padStart(2, '0');
+
+  const hour = String(date.getUTCHours()).padStart(2, '0');
+  const minute = String(date.getUTCMinutes()).padStart(2, '0');
+  const second = String(date.getUTCSeconds()).padStart(2, '0');
+          
+  const strDate = year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+  return strDate
+}
+
 class GerberFile {
   constructor() {}
 
@@ -28,7 +42,7 @@ class GerberFile {
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 9.0.0) date ${date.toISOString()}*
+G04 Created by KiCad (PCBNEW 9.0.0) date ${generateJankDate(date)}*
 %MOMM*%
 %LPD*%
 G01*
