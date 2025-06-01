@@ -31,12 +31,11 @@ function generateJankDate(date: Date){
 
 class GerberFile {
   constructor() {}
-
   generateFile(fileName: string, contents: string) {
     const date = new Date();
-    contents = `%TF.GenerationSoftware,KiCad,Pcbnew,9.0.0*%
+    contents = `%TF.GenerationSoftware,figma-to-pcb,${fileName},9.0.0*%
 %TF.CreationDate,${date.toISOString()}*%
-%TF.ProjectId,athena_workshop,61746865-6e61-45f7-976f-726b73686f70,rev?*%
+%TF.ProjectId,${fileName.replace(" ", "_")},61746865-6e61-45f7-976f-726b73686f70,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Copper,L1,Top*%
 %TF.FilePolarity,Positive*%
@@ -89,13 +88,14 @@ function findVectors(node: SceneNode) {
 
         // Transform local coordinates to absolute coordinates
         const transform = node.absoluteTransform;
+        console.log(transform,"transform")
         const x1 =
-          transform[0][0] * endPoint.x +
-          transform[0][1] * endPoint.y +
-          transform[0][2];
-        const x2 =
           transform[0][0] * startPoint.x +
           transform[0][1] * startPoint.y +
+          transform[0][2];
+        const x2 =
+          transform[0][0] * endPoint.x +
+          transform[0][1] * endPoint.x +
           transform[0][2];
         const y1 =
           transform[1][0] * startPoint.x +
