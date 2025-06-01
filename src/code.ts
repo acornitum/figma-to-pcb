@@ -101,7 +101,6 @@ function findVectors(node: SceneNode) {
           transform[1][0] * startPoint.x +
           transform[1][1] * startPoint.y +
           transform[1][2];
-
         const y2 =
           transform[1][0] * endPoint.x +
           transform[1][1] * endPoint.y +
